@@ -30,8 +30,9 @@ public class Main {
             option = JOptionPane.showConfirmDialog(null, """
                     Welcome to Conway's Game of Life! \s
                     Click "OK" to enter Conway's Game of Life. Once entered, click on the cells to set your initial \s
-                    state of the game, and then click "Enter". Then, type into the text box the number of generations \s
-                    you wish to run! Click "Start" to toggle animations, "Stop" to pause the animations,  and "Start" again to continue the animations.""", null, JOptionPane.OK_CANCEL_OPTION);
+                    state of the game. Then, type into the text box the number of generations \s
+                    you wish to run! Click "Start" to begin running animations, "Stop" to pause the animations,  and "Resume" to continue the animations.
+                    While the animations are paused, click "Reset" to return to the initial state you orginally set""", null, JOptionPane.OK_CANCEL_OPTION);
             // OK option enters the game
             if (option == JOptionPane.OK_OPTION) {
                 JOptionPane.getRootFrame().dispose();

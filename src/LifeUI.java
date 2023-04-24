@@ -16,6 +16,7 @@ public class LifeUI extends Component {
     private JFrame lifeFrame;
     private JPanel lifePanel;
     private JPanel buttonPanel;
+    private JLabel messageLabel;
     private JButton[][] buttonGrid;
     private JTextField gpmTextField;
     private JButton start;
@@ -63,12 +64,16 @@ public class LifeUI extends Component {
         // reset button that resets the cells to the initial state as set by the user
         this.reset = new JButton("Reset");
         this.reset.addActionListener(e -> resetBoard());
+
         this.buttonPanel.add(this.reset);
 
         // layout of the button grid of cells
         this.lifePanel = new JPanel();
         this.lifePanel.setLayout(new GridLayout(initialState.length, initialState[0].length));
         this.lifeFrame.add(this.lifePanel, BorderLayout.CENTER);
+
+        this.messageLabel = new JLabel();
+        this.lifeFrame.add(messageLabel, BorderLayout.SOUTH);
 
         this.buttonGrid = new JButton[initialState.length][initialState[0].length];
 
@@ -130,7 +135,6 @@ public class LifeUI extends Component {
         for (int i = 0; i < cells.length; i++) {
             for (int j = 0; j < cells[i].length; j++) {
                 buttonGrid[i][j].setText(cells[i][j] ? "O" : ".");
-
             }
         }
     }
@@ -148,6 +152,7 @@ public class LifeUI extends Component {
             // while running
             while (!status) {
                 try {
+
                     // call on nextGen() to run new generations
                     board.nextGen();
                     // waits for the current generation to load before updating to a new generation
@@ -155,7 +160,7 @@ public class LifeUI extends Component {
                         updateGrid();
                     });
                     // converts time in minutes to milliseconds, set at 1, divided by user input multiplied by 60 to run at *input* generations per minute
-                    Thread.sleep((long) (TimeUnit.MINUTES.toMillis(1) / (Double.parseDouble(gpmTextField.getText()) * 60)));
+                    Thread.sleep((long) (TimeUnit.MINUTES.toMillis(30) / (Double.parseDouble(gpmTextField.getText()) * 60)));
                 } catch (InterruptedException ex) {
                     status = true;
                 } catch (InvocationTargetException ex) {
@@ -168,6 +173,7 @@ public class LifeUI extends Component {
         });
         // executes the thread
         startAnimation.start();
+        messageLabel.setText("Running animations...");
     }
 
     /**
@@ -180,18 +186,22 @@ public class LifeUI extends Component {
         }
         buttonsEnabled = true;
         gpmTextField.setEnabled(true);
+        start.setText("Resume");
         start.setEnabled(true);
         stop.setEnabled(false);
+        messageLabel.setText("Animations paused...");
     }
 
     /**
      * method for the reset button to reset the board to the initial state that was set by the user
      */
     public void resetBoard() {
+        start.setText("Start");
         // create a new instance of LifeBoard with the initial state as its parameters
         this.board = new LifeBoard(initialState);
         // call on updateGrid() to reset the board
         updateGrid();
+        messageLabel.setText("");
     }
 }
 
