@@ -163,4 +163,12 @@ public class LifeBoard extends JPanel {
         }
         System.out.println(Arrays.deepToString(cells));
     }
+
+    /**
+     * stores the current state of the game to the cells array
+     * @param state current state of the game
+     */
+    public void setBoardState(boolean[][] state) {
+        this.cells = state;
+    }
 }

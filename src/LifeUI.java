@@ -1,5 +1,8 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.TimeUnit;
 
@@ -16,17 +19,24 @@ public class LifeUI extends Component {
     private JFrame lifeFrame;
     private JPanel lifePanel;
     private JPanel buttonPanel;
+    private JPanel fileButtonPanel;
     private JLabel messageLabel;
     private JButton[][] buttonGrid;
     private JTextField gpmTextField;
     private JButton start;
     private JButton stop;
     private JButton reset;
+    private JButton save;
+    private JButton restore;
     private boolean buttonsEnabled;
     private Thread startAnimation;
+    private Color alive = Color.GREEN;
+    private Color dead = Color.RED;
 
     /**
-     * Constructor for the grid of 2D Array of Booleans
+     * Constructor for the grid of 2D Array of Booleans. Contains the logic for setting the state of cells manually,
+     * and the logic for saving and restoring game files, as well as frame, panel, label, and button initialization.
+     * The meat and potatoes for the user interface.
      * @param grid 2D into Array of Booleans to represent the cells of the game
      */
     public LifeUI(boolean[][] grid) {
@@ -45,6 +55,7 @@ public class LifeUI extends Component {
 
         // text field for the user enter the rate at which the animation thread runs generations of life
         this.gpmTextField = new JTextField();
+
         this.buttonPanel.add(this.gpmTextField);
 
         // start button that begins the animation thread
@@ -67,6 +78,83 @@ public class LifeUI extends Component {
 
         this.buttonPanel.add(this.reset);
 
+        // initialization for the save button
+        this.save = new JButton("Save Game");
+        this.save.addActionListener(e -> {
+            // JFileChooser opens a file explorer for the user to create a save destination for the initial state
+            JFileChooser fileChooser = new JFileChooser();
+            int returnValue = fileChooser.showSaveDialog(null);
+            if (returnValue == JFileChooser.APPROVE_OPTION) {
+                try {
+                    // file object to be assigned to the file selected by the user
+                    File file = fileChooser.getSelectedFile();
+                    // check if the file already exists (confirm overwrite check)
+                    if (file.exists()) {
+                        int newSaveFile = JOptionPane.showConfirmDialog(null, "This file already" +
+                                " contains a previously saved state of the game, Are you sure you want to overwrite?",
+                                "Overwrite File", JOptionPane.YES_NO_OPTION);
+                        if (newSaveFile != JOptionPane.YES_OPTION) {
+                            return;
+                        }
+                    }
+                    // output stream object
+                    FileOutputStream output = new FileOutputStream(file);
+                    // writes objects to an output stream
+                    ObjectOutputStream outputObj = new ObjectOutputStream(output);
+                    // writes the initial state to the object output stream
+                    outputObj.writeObject(initialState);
+                    outputObj.close();
+                    output.close();
+                    messageLabel.setText("Game Saved Successfully!");
+                } catch (IOException ex) {
+                    messageLabel.setText("Error saving game: " + ex.getMessage());
+                }
+            }
+        });
+
+        this.fileButtonPanel = new JPanel();
+        this.fileButtonPanel.add(save);
+
+        this.restore = new JButton("Restore Saved Game");
+        this.restore.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            int returnValue = fileChooser.showOpenDialog(null);
+            if (returnValue == JFileChooser.APPROVE_OPTION) {
+                try {
+                    File file = fileChooser.getSelectedFile();
+                    // check if a user wants to overwrite current game state with a previously saved game
+                    if (initialState != null) {
+                        int foundSaveFile = JOptionPane.showConfirmDialog(null, "Loading a saved" +
+                                " game will overwrite the current game. Are you sure you want to continue?", "Restore" +
+                                " Previously Saved Game", JOptionPane.YES_NO_OPTION);
+                        if (foundSaveFile != JOptionPane.YES_OPTION) {
+                            return;
+                        }
+                    }
+                    // input stream object
+                    FileInputStream input = new FileInputStream(file);
+                    // writes objects to an input stream
+                    ObjectInputStream inputObj = new ObjectInputStream(input);
+                    // reads the objects from the input stream and casts it to the 2D boolean array, set to the initial state
+                    initialState = (boolean[][]) inputObj.readObject();
+                    inputObj.close();
+                    input.close();
+                    // updates the current state of the game to the initial state from the file
+                    board.setBoardState(initialState);
+                    // call to updateGrid() to create the initial state
+                    updateGrid();
+                    messageLabel.setText("Game Restored Successfully!");
+                } catch (IOException ex) {
+                    messageLabel.setText("Error restoring game: " + ex.getMessage());
+                } catch (ClassNotFoundException ex) {
+                    messageLabel.setText("Error restoring game: Save file does not exist!");
+                }
+            }
+        });
+
+        this.fileButtonPanel.add(restore);
+        this.buttonPanel.add(this.fileButtonPanel);
+
         // layout of the button grid of cells
         this.lifePanel = new JPanel();
         this.lifePanel.setLayout(new GridLayout(initialState.length, initialState[0].length));
@@ -81,15 +169,19 @@ public class LifeUI extends Component {
         for (int i = 0; i < initialState.length; i++) {
             for (int j = 0; j < initialState[i].length; j++) {
                 JButton button = new JButton(initialState[i][j] ? "O" : ".");
+                button.setBackground(Color.WHITE);
                 button.setEnabled(true);
                 button.setPreferredSize(new Dimension(45,45));
                 button.addActionListener(e -> {
+                    // check if the buttons are enabled
                     if (buttonsEnabled) {
+                        // object used to listen for which button is clicked
                         JButton clickedButton = (JButton) e.getSource();
                         int row = -1;
                         int col = -1;
                         for (int i1 = 0; i1 < buttonGrid.length; i1++) {
                             for (int j1 = 0; j1 < buttonGrid[0].length; j1++) {
+                                // determines the coordinate of the button click determined by the row and column assignment
                                 if (buttonGrid[i1][j1] == clickedButton) {
                                     row = i1;
                                     col = j1;
@@ -97,6 +189,7 @@ public class LifeUI extends Component {
                                 }
                             }
                         }
+                        // toggles the boolean value of a button click, setting the text accordingly
                         initialState[row][col] = !initialState[row][col];
                         clickedButton.setText(initialState[row][col] ? "O" : ".");
                     }
@@ -134,7 +227,15 @@ public class LifeUI extends Component {
         boolean[][] cells = board.getCells();
         for (int i = 0; i < cells.length; i++) {
             for (int j = 0; j < cells[i].length; j++) {
-                buttonGrid[i][j].setText(cells[i][j] ? "O" : ".");
+                if (cells[i][j]) {
+                    buttonGrid[i][j].setBackground(Color.GREEN);
+                    buttonGrid[i][j].setForeground(Color.BLACK);
+                    buttonGrid[i][j].setText("O");
+                } else {
+                    buttonGrid[i][j].setBackground(Color.RED);
+                    buttonGrid[i][j].setForeground(Color.BLACK);
+                    buttonGrid[i][j].setText(".");
+                }
             }
         }
     }
@@ -143,9 +244,58 @@ public class LifeUI extends Component {
      * method for the animation thread
      */
     public void startAnimation() {
+        String gpmText = gpmTextField.getText().trim();
+        // check to ensure the user has entered a value for gpm
+        if (gpmText.isEmpty()) {
+            start.setEnabled(true);
+            messageLabel.setText("Please enter a value for generations per minute!");
+            return;
+        }
+        // boolean object determines if an initial state is set
+        boolean setInitialState = false;
+        for (int i = 0; i < initialState.length; i++) {
+            for (int j = 0; j < initialState[i].length; j++) {
+                // check if the user set an initial state
+                if (initialState[i][j]) {
+                    setInitialState = true;
+                    break;
+                }
+            }
+        }
+        // check if the user didn't set an initial state
+        if (!setInitialState) {
+            start.setEnabled(true);
+            messageLabel.setText("You need to set an initial state of the game!");
+            return;
+        }
         buttonsEnabled = false;
         start.setEnabled(false);
         stop.setEnabled(true);
+
+        // key listener for the JTextField
+        gpmTextField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                char c = e.getKeyChar();
+                // ignores non-digit characters and backspacing (a user can still highlight the text and replace it)
+                if (!Character.isDigit(c) || c == KeyEvent.VK_BACK_SPACE) {
+                    e.consume();
+                } else {
+                    String text  = gpmTextField.getText();
+                    String newText = text + c;
+                    try {
+                        int value = Integer.parseInt(newText);
+                        // check to prevent a user from entering values outside the 1 to 250 range
+                        if (value < 1 || value > 250) {
+                            e.consume();
+                            messageLabel.setText("Only enter values from 1 to 250!");
+                        }
+                    } catch (NumberFormatException n) {
+                        e.consume();
+                    }
+                }
+            }
+        });
         startAnimation = new Thread(() -> {
             // state of the animation not running by default
             boolean status = false;
