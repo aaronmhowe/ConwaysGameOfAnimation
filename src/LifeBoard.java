@@ -1,6 +1,6 @@
 /**
  * Aaron Howe
- * HW11: Life-Controller
+ * HW12: Life-Controller
  * Minimal
  */
 
