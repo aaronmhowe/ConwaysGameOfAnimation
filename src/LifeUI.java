@@ -306,10 +306,8 @@ public class LifeUI extends Component {
                     // call on nextGen() to run new generations
                     board.nextGen();
                     // waits for the current generation to load before updating to a new generation
-                    SwingUtilities.invokeAndWait(() -> {
-                        updateGrid();
-                    });
-                    // converts time in minutes to milliseconds, set at 1, divided by user input multiplied by 60 to run at *input* generations per minute
+                    SwingUtilities.invokeAndWait(this::updateGrid);
+                    // converts time in minutes to milliseconds, set at 30, divided by user input multiplied by 60 to run at *input* generations per minute
                     Thread.sleep((long) (TimeUnit.MINUTES.toMillis(30) / (Double.parseDouble(gpmTextField.getText()) * 60)));
                 } catch (InterruptedException ex) {
                     status = true;
